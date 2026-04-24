@@ -1,7 +1,13 @@
-# ScreenPipe
+<p align="center">
+  <img src="Resources/icon.png" width="200" alt="ScreenPipe icon">
+</p>
 
-A tiny macOS menu-bar app that funnels screenshots straight into your terminal —
-so you can send them to Claude Code without leaving the keyboard.
+<h1 align="center">ScreenPipe</h1>
+
+<p align="center">
+  A floating terminal mirror for Claude Code — see your terminal on top of any app.<br>
+  Supports Terminal.app and iTerm2. Free and open source.
+</p>
 
 ## What it does
 
