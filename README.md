@@ -9,6 +9,14 @@
   Supports Terminal.app and iTerm2. Free and open source.
 </p>
 
+<p align="center">
+  <a href="https://github.com/jarnaljitsingh/ScreenPipe/releases/latest"><img src="https://img.shields.io/github/v/release/jarnaljitsingh/ScreenPipe?label=Download&style=for-the-badge" alt="Download"></a>
+</p>
+
+## Download
+
+**[Download ScreenPipe v1.0.0](https://github.com/jarnaljitsingh/ScreenPipe/releases/latest)** — unzip, move to `/Applications`, and open. Requires macOS 13+.
+
 ## What it does
 
 - Lives in the menu bar, no dock icon.
