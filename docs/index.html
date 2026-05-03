@@ -67,11 +67,8 @@
   .brand{ display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
   .brand-mark{
     width: 28px; height: 28px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--accent), #ff4d1f);
-    display: grid; place-items: center;
-    box-shadow: 0 6px 24px -8px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.25);
-    color: #1a0a04; font-weight: 800; font-size: 14px;
-    font-family: 'JetBrains Mono', monospace;
+    box-shadow: 0 6px 24px -8px var(--accent-glow);
+    object-fit: cover;
   }
   .nav-links{ display:flex; align-items:center; gap: 28px; font-size: 14px; color: var(--fg-2); }
   .nav-links a{ transition: color .15s ease; }
@@ -138,17 +135,13 @@
   .hero-logo{
     width: 96px; height: 96px; border-radius: 22px;
     margin: 28px 0 22px;
-    background:
-      radial-gradient(120% 120% at 30% 20%, #ff8a5c 0%, #ff6b35 40%, #d94a18 100%);
     box-shadow:
       0 30px 80px -20px var(--accent-glow),
-      0 10px 30px -10px rgba(0,0,0,0.6),
-      inset 0 1px 0 rgba(255,255,255,0.35),
-      inset 0 -10px 30px rgba(0,0,0,0.25);
-    display: grid; place-items: center;
+      0 10px 30px -10px rgba(0,0,0,0.6);
+    overflow: hidden;
     position: relative;
   }
-  .hero-logo svg{ width: 52px; height: 52px; color: #1a0a04; }
+  .hero-logo img{ width: 100%; height: 100%; object-fit: cover; border-radius: 22px; }
 
   h1.hero-title{
     font-size: clamp(40px, 6vw, 76px);
@@ -752,7 +745,7 @@
 <header class="nav">
   <div class="wrap nav-inner">
     <a href="#" class="brand">
-      <span class="brand-mark">&gt;_</span>
+      <img class="brand-mark" src="icon.png" alt="ScreenPipe">
       <span>ScreenPipe</span>
     </a>
     <nav class="nav-links">
@@ -777,11 +770,7 @@
     </div>
 
     <div class="hero-logo" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 7h16v12H4z"/>
-        <path d="m8 11 3 3-3 3"/>
-        <path d="M14 17h3"/>
-      </svg>
+      <img src="icon.png" alt="ScreenPipe">
     </div>
 
     <h1 class="hero-title">
