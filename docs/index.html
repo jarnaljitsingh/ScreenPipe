@@ -1,222 +1,1153 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ScreenPipe — Floating Terminal Mirror for Claude Code</title>
+<meta name="description" content="ScreenPipe is a free, open-source macOS app that floats your terminal on top of any window — built for developers using Claude Code." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    width: 100vw;
-    height: 100vh;
-    background: #0d0d0d;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Inter', sans-serif;
-    color: #fff;
-    overflow: hidden;
-    position: relative;
+  :root{
+    --bg: #0d0d0d;
+    --bg-2: #131313;
+    --bg-3: #181818;
+    --line: rgba(255,255,255,0.08);
+    --line-2: rgba(255,255,255,0.14);
+    --fg: #f4f4f3;
+    --fg-2: #b8b6b1;
+    --fg-3: #7a7872;
+    --accent: #ff6b35;
+    --accent-2: #ff8a5c;
+    --accent-soft: rgba(255,107,53,0.14);
+    --accent-glow: rgba(255,107,53,0.35);
+    --term-bg: #0a0a0a;
+    --term-line: rgba(255,255,255,0.06);
+    --green: #7ee787;
+    --blue: #79c0ff;
+    --pink: #ff9bd2;
+    --yellow: #f2cc60;
+    --radius: 14px;
+    --maxw: 1180px;
   }
 
-  body::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at 50% 60%, rgba(255, 107, 53, 0.12) 0%, transparent 50%),
-                radial-gradient(circle at 30% 30%, rgba(255, 107, 53, 0.06) 0%, transparent 40%);
+  *,*::before,*::after{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  ::selection{ background: var(--accent); color: #0a0a0a; }
+
+  a{ color: inherit; text-decoration: none; }
+  button{ font-family: inherit; }
+
+  .wrap{ max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+
+  /* ---------------- NAV ---------------- */
+  .nav{
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: rgba(13,13,13,0.72);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner{
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .brand{ display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-mark{
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #ff4d1f);
+    display: grid; place-items: center;
+    box-shadow: 0 6px 24px -8px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.25);
+    color: #1a0a04; font-weight: 800; font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .nav-links{ display:flex; align-items:center; gap: 28px; font-size: 14px; color: var(--fg-2); }
+  .nav-links a{ transition: color .15s ease; }
+  .nav-links a:hover{ color: var(--fg); }
+  .nav-cta{
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 14px; border-radius: 10px;
+    background: var(--bg-3); border: 1px solid var(--line-2);
+    font-size: 13px; font-weight: 500; color: var(--fg);
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .nav-cta:hover{ background: #1f1f1f; border-color: rgba(255,255,255,0.22); }
+  @media (max-width: 720px){
+    .nav-links{ display: none; }
+  }
+
+  /* ---------------- HERO ---------------- */
+  .hero{
+    position: relative;
+    padding: 96px 0 80px;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .hero::before{
+    content: "";
+    position: absolute; inset: -20% -10% auto -10%; height: 720px;
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(255,107,53,0.16), transparent 70%),
+      radial-gradient(40% 40% at 80% 20%, rgba(255,107,53,0.08), transparent 70%);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .hero::after{
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 80%);
+    z-index: -1;
     pointer-events: none;
   }
 
-  .container {
-    text-align: center;
+  .hero-inner{ display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+  .pill{
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 30px; padding: 0 12px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(255,107,53,0.28);
+    color: var(--accent-2);
+    font-size: 12.5px; font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+  .pill .dot{
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  .hero-logo{
+    width: 96px; height: 96px; border-radius: 22px;
+    margin: 28px 0 22px;
+    background:
+      radial-gradient(120% 120% at 30% 20%, #ff8a5c 0%, #ff6b35 40%, #d94a18 100%);
+    box-shadow:
+      0 30px 80px -20px var(--accent-glow),
+      0 10px 30px -10px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.35),
+      inset 0 -10px 30px rgba(0,0,0,0.25);
+    display: grid; place-items: center;
     position: relative;
-    z-index: 1;
-    animation: fadeUp 1s ease-out;
   }
+  .hero-logo svg{ width: 52px; height: 52px; color: #1a0a04; }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+  h1.hero-title{
+    font-size: clamp(40px, 6vw, 76px);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+    margin: 8px 0 18px;
+    max-width: 14ch;
+    text-wrap: balance;
   }
-
-  .icon {
-    width: 120px;
-    height: 120px;
-    border-radius: 28px;
-    margin: 0 auto 30px;
-    box-shadow: 0 10px 40px rgba(255, 107, 53, 0.3);
-  }
-
-  .title {
-    font-size: 64px;
-    font-weight: 900;
-    letter-spacing: -2px;
-    margin-bottom: 12px;
-    background: linear-gradient(135deg, #fff 0%, #ccc 100%);
+  h1.hero-title .accent{
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
   }
 
-  .subtitle {
-    font-size: 22px;
-    color: rgba(255,255,255,0.5);
-    font-weight: 400;
-    margin-bottom: 50px;
+  .hero-sub{
+    font-size: clamp(16px, 1.6vw, 19px);
+    color: var(--fg-2);
+    max-width: 56ch;
+    margin: 0 auto 32px;
+    text-wrap: pretty;
   }
 
-  .download-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    background: linear-gradient(135deg, #ff6b35 0%, #e04500 100%);
-    color: #fff;
-    font-size: 22px;
-    font-weight: 700;
-    padding: 18px 48px;
-    border-radius: 16px;
-    text-decoration: none;
-    box-shadow: 0 8px 32px rgba(255, 107, 53, 0.4);
-    margin-bottom: 40px;
-    letter-spacing: 0.5px;
+  .cta-row{
+    display: flex; flex-wrap: wrap; gap: 12px;
+    justify-content: center; align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .btn{
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 50px; padding: 0 22px;
+    border-radius: 12px;
+    font-weight: 600; font-size: 15px;
+    border: 1px solid transparent;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform .12s ease, background .15s ease, border-color .15s ease, box-shadow .2s ease;
   }
-
-  .download-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.5);
+  .btn-primary{
+    background: linear-gradient(180deg, #ff7a45, var(--accent));
+    color: #1a0a04;
+    box-shadow:
+      0 10px 30px -10px var(--accent-glow),
+      inset 0 1px 0 rgba(255,255,255,0.35);
   }
-
-  .download-icon {
-    font-size: 26px;
+  .btn-primary:hover{
+    transform: translateY(-1px);
+    box-shadow:
+      0 16px 40px -12px var(--accent-glow),
+      inset 0 1px 0 rgba(255,255,255,0.4);
   }
-
-  .link {
-    font-size: 26px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.85);
-    margin-bottom: 50px;
-    letter-spacing: 0.5px;
+  .btn-ghost{
+    background: rgba(255,255,255,0.04);
+    border-color: var(--line-2);
+    color: var(--fg);
   }
+  .btn-ghost:hover{ background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.22); }
 
-  .link span {
-    color: #ff6b35;
-  }
-
-  .steps {
-    display: flex;
-    gap: 40px;
+  .meta-row{
+    display: flex; flex-wrap: wrap; gap: 18px 22px;
     justify-content: center;
-    align-items: center;
+    color: var(--fg-3);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .meta-row .item{ display: inline-flex; align-items: center; gap: 8px; }
+  .meta-row .item svg{ width: 14px; height: 14px; color: var(--fg-2); }
+
+  /* ---------------- HERO MOCK ---------------- */
+  .hero-mock{
+    margin-top: 64px;
+    position: relative;
+    width: 100%;
+    max-width: 1080px;
   }
 
-  .step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
+  .browser{
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f4efe8;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 60px 120px -40px rgba(0,0,0,0.8),
+      0 30px 60px -30px rgba(0,0,0,0.6);
+    aspect-ratio: 16 / 10;
+    position: relative;
+  }
+  .browser-bar{
+    height: 36px; padding: 0 14px;
+    display: flex; align-items: center; gap: 10px;
+    background: #e5dfd6;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .traffic{ display:flex; gap: 7px; }
+  .traffic span{ width: 11px; height: 11px; border-radius: 999px; background: #c9c2b6; }
+  .traffic span:nth-child(1){ background: #ec6a5e; }
+  .traffic span:nth-child(2){ background: #f4bf4f; }
+  .traffic span:nth-child(3){ background: #61c554; }
+  .browser-url{
+    flex: 1; height: 22px;
+    background: #f4efe8;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6b6357;
+    max-width: 320px; margin: 0 auto;
+  }
+  .browser-body{
+    position: absolute; inset: 36px 0 0 0;
+    background:
+      linear-gradient(180deg, #f6f1ea 0%, #ece5da 100%);
+    padding: 36px 44px;
+    color: #2b2521;
+    font-size: 13px;
+    overflow: hidden;
+  }
+  .doc-h{ font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; color: #1a1612; }
+  .doc-p{ color: #6b6357; max-width: 64ch; line-height: 1.6; margin: 0 0 14px; }
+  .doc-block{
+    margin-top: 18px; padding: 16px;
+    background: #fff8ef;
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: #5a4f43;
+  }
+  .doc-rows{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+  .doc-card{
+    background: #fff8ef; border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .doc-card h4{ margin: 0 0 6px; font-size: 13px; color: #1a1612; }
+  .doc-card p{ margin: 0; font-size: 12px; color: #6b6357; line-height: 1.5; }
+
+  /* Floating terminal pinned over the browser */
+  .pip{
+    position: absolute;
+    right: -28px; bottom: -36px;
+    width: 56%;
+    max-width: 580px;
+    border-radius: 14px;
+    background: var(--term-bg);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow:
+      0 40px 80px -20px rgba(0,0,0,0.9),
+      0 20px 40px -10px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(255,107,53,0.12),
+      0 0 60px -10px var(--accent-glow);
+    overflow: hidden;
+    transform: rotate(-1.2deg);
+  }
+  .pip-bar{
+    height: 32px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 12px;
+    background: #141414;
+    border-bottom: 1px solid var(--term-line);
+  }
+  .pip-bar .dots{ display:flex; gap: 6px; }
+  .pip-bar .dots span{ width: 10px; height: 10px; border-radius: 999px; background: #2a2a2a; }
+  .pip-bar .dots span:first-child{ background: var(--accent); }
+  .pip-title{
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--fg-3);
+    flex: 1; text-align: center;
+  }
+  .pin-ico{ width: 14px; height: 14px; color: var(--accent); }
+  .pip-body{
+    padding: 16px 16px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
+  .ln{ display: flex; gap: 10px; }
+  .ln .pmt{ color: var(--accent); }
+  .ln .pth{ color: var(--blue); }
+  .ln .cmd{ color: var(--fg); }
+  .ln .out{ color: var(--fg-2); }
+  .ln .ok{ color: var(--green); }
+  .ln .warn{ color: var(--yellow); }
+  .ln .pink{ color: var(--pink); }
+  .ln .muted{ color: var(--fg-3); }
+  .caret{
+    display: inline-block; width: 8px; height: 14px;
+    background: var(--accent);
+    vertical-align: -2px;
+    animation: blink 1s steps(2) infinite;
+    margin-left: 2px;
+  }
+  @keyframes blink{ 50%{ opacity: 0; } }
+
+  .pip-input{
+    margin: 8px 12px 12px;
+    display: flex; align-items: center; gap: 8px;
+    height: 34px; padding: 0 10px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif; font-size: 12px;
+    color: var(--fg-2);
+  }
+  .pip-input .send{
+    margin-left: auto;
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--accent); color: #1a0a04;
+    display: grid; place-items: center;
+  }
+  .pip-input .send svg{ width: 12px; height: 12px; }
+
+  @media (max-width: 760px){
+    .pip{ position: static; width: 100%; transform: none; margin-top: 18px; }
+    .doc-rows{ grid-template-columns: 1fr; }
+    .browser-body{ padding: 22px; }
   }
 
-  .step-number {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(255, 107, 53, 0.15);
-    border: 2px solid rgba(255, 107, 53, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
+  /* ---------------- SECTIONS ---------------- */
+  section{ padding: 120px 0; position: relative; }
+  .eyebrow{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .eyebrow::before{
+    content: ""; width: 18px; height: 1px; background: var(--accent);
+  }
+  h2.section-title{
+    font-size: clamp(30px, 4vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
     font-weight: 700;
-    color: #ff6b35;
+    margin: 0 0 16px;
+    max-width: 22ch;
+    text-wrap: balance;
+  }
+  .section-sub{
+    font-size: 17px; color: var(--fg-2); max-width: 60ch;
+    margin: 0 0 56px;
+    text-wrap: pretty;
   }
 
-  .step-text {
-    font-size: 17px;
-    color: rgba(255,255,255,0.6);
-    font-weight: 500;
+  /* ---------------- PROBLEM (Before / After) ---------------- */
+  .problem{ border-top: 1px solid var(--line); }
+  .compare{
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    align-items: stretch;
+  }
+  @media (max-width: 860px){ .compare{ grid-template-columns: 1fr; } }
+  .compare-card{
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .compare-card.bad{ }
+  .compare-card.good{
+    background: linear-gradient(180deg, #161210 0%, var(--bg-2) 100%);
+    border-color: rgba(255,107,53,0.25);
+  }
+  .compare-tag{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 12px;
+  }
+  .compare-card.good .compare-tag{ color: var(--accent); }
+  .compare-card h3{
+    margin: 0 0 8px; font-size: 22px; letter-spacing: -0.01em;
+  }
+  .compare-card p{
+    color: var(--fg-2); margin: 0 0 22px; font-size: 14.5px;
   }
 
-  .arrow {
-    font-size: 24px;
-    color: rgba(255,255,255,0.2);
-    margin-top: -15px;
+  /* Animated stack */
+  .stack{
+    position: relative; height: 230px;
   }
-
-  .badge {
+  .win{
     position: absolute;
-    top: 40px;
-    right: 50px;
-    background: rgba(255, 107, 53, 0.12);
-    border: 1px solid rgba(255, 107, 53, 0.3);
-    padding: 10px 24px;
-    border-radius: 50px;
-    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--line-2);
+    background: var(--bg-3);
+    box-shadow: 0 14px 30px -10px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+  .win-bar{
+    height: 22px; background: #1f1f1f;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 5px; padding: 0 8px;
+  }
+  .win-bar i{ width: 7px; height: 7px; border-radius: 99px; background: #2e2e2e; }
+  .win-body{ padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--fg-3); }
+
+  /* bad: scattered windows */
+  .bad-stack .w1{ left: 0; top: 0; width: 56%; height: 130px; }
+  .bad-stack .w2{ right: 0; top: 24px; width: 48%; height: 120px; }
+  .bad-stack .w3{
+    left: 18%; bottom: 0; width: 64%; height: 120px;
+    background: var(--term-bg); border-color: rgba(255,255,255,0.1);
+  }
+  .bad-stack .w3 .win-bar{ background: #141414; }
+  .bad-stack .arrows{
+    position: absolute; inset: 0; pointer-events: none;
+  }
+  .bad-stack .arrows svg{ position: absolute; }
+
+  /* good: app + persistent floating terminal */
+  .good-stack .w1{
+    left: 0; top: 0; right: 0; bottom: 0; width: auto; height: auto;
+  }
+  .good-stack .w1 .win-body{ padding: 12px; }
+  .good-stack .pip-mini{
+    position: absolute;
+    right: 14px; bottom: 14px;
+    width: 58%; height: 110px;
+    border-radius: 8px;
+    background: var(--term-bg);
+    border: 1px solid rgba(255,107,53,0.3);
+    box-shadow: 0 0 0 1px rgba(255,107,53,0.18), 0 18px 40px -12px var(--accent-glow);
+    overflow: hidden;
+  }
+  .good-stack .pip-mini .win-bar{ background: #141414; border-bottom-color: var(--term-line); }
+  .good-stack .pip-mini .win-bar i:first-child{ background: var(--accent); }
+  .good-stack .pip-mini .win-body{ padding: 8px 10px; font-size: 9.5px; color: var(--fg-2); }
+  .good-stack .pip-mini .acc{ color: var(--accent); }
+
+  /* ---------------- FEATURES GRID ---------------- */
+  .features{ border-top: 1px solid var(--line); }
+  .grid{
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (max-width: 900px){ .grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px){ .grid{ grid-template-columns: 1fr; } }
+  .feat{
+    background: var(--bg);
+    padding: 28px 26px;
+    min-height: 220px;
+    display: flex; flex-direction: column;
+    transition: background .15s ease;
+  }
+  .feat:hover{ background: var(--bg-2); }
+  .feat .icon{
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(255,107,53,0.25);
+    color: var(--accent);
+    display: grid; place-items: center;
+    margin-bottom: 18px;
+  }
+  .feat .icon svg{ width: 18px; height: 18px; }
+  .feat h3{ font-size: 17px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .feat p{ margin: 0; color: var(--fg-2); font-size: 14px; line-height: 1.55; }
+  .feat .kbd{
+    margin-top: auto; padding-top: 16px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .key{
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: #1d1d1d;
+    border: 1px solid var(--line-2);
+    color: var(--fg);
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.4);
+  }
+  .key + .plus{ color: var(--fg-3); align-self: center; font-size: 11px; }
+
+  /* ---------------- DEMO ---------------- */
+  .demo{ border-top: 1px solid var(--line); }
+  .demo-frame{
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.7);
+  }
+  .demo-toolbar{
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-3);
+  }
+  .demo-toolbar .left{ display:flex; align-items:center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg-2); }
+  .demo-toolbar .menu{ display:flex; align-items:center; gap: 14px; color: var(--fg-3); font-size: 12px; }
+  .demo-toolbar .menu .live{
+    display:inline-flex; align-items:center; gap: 6px;
+    color: var(--accent);
+  }
+  .demo-toolbar .menu .live span{
+    width: 6px; height: 6px; border-radius: 99px; background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{ opacity: 1; } 50%{ opacity: 0.35; } }
+
+  .demo-stage{
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(60% 50% at 30% 0%, rgba(255,107,53,0.08), transparent 70%),
+      #0f0f0f;
+    overflow: hidden;
+  }
+  /* IDE shell */
+  .ide{
+    position: absolute; inset: 24px;
+    border-radius: 10px;
+    background: #161616;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 32px 1fr 28px;
+  }
+  .ide-top{
+    grid-column: 1 / -1;
+    background: #1b1b1b;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px; padding: 0 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--fg-3);
+  }
+  .ide-top .tabs{ display:flex; gap: 4px; margin-left: 12px; }
+  .ide-top .tab{
+    height: 22px; display:inline-flex; align-items:center; gap: 6px;
+    padding: 0 10px; border-radius: 6px;
+    background: #232323; color: var(--fg-2);
+  }
+  .ide-top .tab.active{ background: #2c2c2c; color: var(--fg); }
+  .ide-side{
+    background: #131313;
+    border-right: 1px solid var(--line);
+    padding: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--fg-3);
+    line-height: 1.9;
+  }
+  .ide-side .folder{ color: var(--fg-2); }
+  .ide-side .file{ padding-left: 14px; }
+  .ide-side .file.active{ color: var(--accent); }
+  .ide-main{
+    background: #161616;
+    padding: 14px 18px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    line-height: 1.7;
+    overflow: hidden;
+    position: relative;
+  }
+  .ide-main .gutter{
+    position: absolute; left: 0; top: 14px; bottom: 14px; width: 28px;
+    text-align: right; padding-right: 10px;
+    color: #444; font-size: 11px; line-height: 1.7;
+  }
+  .ide-main pre{
+    margin: 0; padding-left: 28px;
+    color: var(--fg-2); white-space: pre-wrap;
+  }
+  .tk-key{ color: #ff7b9c; }
+  .tk-fn{ color: #d2a8ff; }
+  .tk-str{ color: #a5d6ff; }
+  .tk-com{ color: #6e7681; }
+  .tk-var{ color: #ffa657; }
+  .tk-tag{ color: var(--green); }
+
+  .ide-bot{
+    grid-column: 1 / -1;
+    background: var(--accent);
+    color: #1a0a04;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    display:flex; align-items:center; gap: 14px; padding: 0 12px;
     font-weight: 600;
-    color: #ff6b35;
-    letter-spacing: 1px;
+  }
+  .ide-bot .seg{ display:inline-flex; align-items:center; gap: 6px; }
+
+  /* PiP overlay on demo */
+  .demo-pip{
+    position: absolute; right: 60px; bottom: 60px;
+    width: 38%; max-width: 420px;
+    border-radius: 12px;
+    background: var(--term-bg);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.9),
+      0 0 0 1px rgba(255,107,53,0.18),
+      0 0 50px -10px var(--accent-glow);
+    overflow: hidden;
+  }
+  .demo-pip .pip-body{ font-size: 11.5px; }
+
+  @media (max-width: 760px){
+    .ide{ grid-template-columns: 1fr; grid-template-rows: 32px auto 28px; }
+    .ide-side{ display: none; }
+    .demo-pip{ right: 18px; bottom: 18px; width: 70%; }
   }
 
-  .platforms {
-    position: absolute;
-    bottom: 40px;
-    display: flex;
-    gap: 30px;
-    font-size: 15px;
-    color: rgba(255,255,255,0.3);
-    font-weight: 500;
+  /* ---------------- INSTALL ---------------- */
+  .install{ border-top: 1px solid var(--line); }
+  .steps{
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    counter-reset: step;
   }
+  @media (max-width: 820px){ .steps{ grid-template-columns: 1fr; } }
+  .step{
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 24px 22px;
+    position: relative;
+    counter-increment: step;
+  }
+  .step::before{
+    content: "0" counter(step);
+    position: absolute; right: 22px; top: 18px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--fg-3); letter-spacing: 0.08em;
+  }
+  .step .step-ico{
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--bg-3);
+    border: 1px solid var(--line-2);
+    color: var(--accent);
+    display: grid; place-items: center;
+    margin-bottom: 16px;
+  }
+  .step .step-ico svg{ width: 18px; height: 18px; }
+  .step h3{ font-size: 17px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .step p{ margin: 0 0 12px; color: var(--fg-2); font-size: 14px; }
+  .step code{
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--fg-2);
+    padding: 4px 8px;
+    background: #161616;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  /* ---------------- CTA ---------------- */
+  .cta{
+    border-top: 1px solid var(--line);
+  }
+  .cta-card{
+    position: relative;
+    border-radius: 18px;
+    padding: 64px 40px;
+    text-align: center;
+    background:
+      radial-gradient(80% 100% at 50% 0%, rgba(255,107,53,0.18), transparent 70%),
+      var(--bg-2);
+    border: 1px solid rgba(255,107,53,0.22);
+    overflow: hidden;
+  }
+  .cta-card::before{
+    content: "";
+    position: absolute; left: 0; right: 0; top: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+  }
+  .cta-card h2{
+    margin: 0 0 12px;
+    font-size: clamp(28px, 3.4vw, 42px);
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .cta-card p{
+    margin: 0 auto 28px; color: var(--fg-2); max-width: 50ch;
+    font-size: 16px;
+  }
+
+  /* ---------------- FOOTER ---------------- */
+  footer{
+    border-top: 1px solid var(--line);
+    padding: 36px 0;
+    color: var(--fg-3);
+    font-size: 13px;
+  }
+  .foot-inner{
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .foot-inner a:hover{ color: var(--fg); }
+  .foot-links{ display:flex; gap: 22px; align-items:center; }
+
+  /* shared icon size */
+  .ico{ width: 16px; height: 16px; }
 </style>
 </head>
 <body>
 
-<div class="badge">FREE & OPEN SOURCE</div>
+<!-- ============== NAV ============== -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="#" class="brand">
+      <span class="brand-mark">&gt;_</span>
+      <span>ScreenPipe</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#demo">Demo</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/jarnaljitsingh/ScreenPipe">GitHub</a>
+    </nav>
+    <a class="nav-cta" href="https://github.com/jarnaljitsingh/ScreenPipe/releases/latest">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      Download
+    </a>
+  </div>
+</header>
 
-<div class="container">
-  <img src="icon.png" class="icon" alt="ScreenPipe">
-
-  <div class="title">ScreenPipe</div>
-  <div class="subtitle">Floating Terminal Mirror for Claude Code</div>
-
-  <a href="https://github.com/jarnaljitsingh/ScreenPipe/releases/latest" class="download-btn">
-    <span class="download-icon">↓</span> Download Now
-  </a>
-
-  <div class="link">github.com/<span>jarnaljitsingh</span>/ScreenPipe</div>
-
-  <div class="steps">
-    <div class="step">
-      <div class="step-number">1</div>
-      <div class="step-text">Download ZIP</div>
+<!-- ============== HERO ============== -->
+<section class="hero">
+  <div class="wrap hero-inner">
+    <div class="pill">
+      <span class="dot"></span>
+      Free &amp; open source · macOS 13+
     </div>
-    <div class="arrow">→</div>
-    <div class="step">
-      <div class="step-number">2</div>
-      <div class="step-text">Move to Applications</div>
+
+    <div class="hero-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h16v12H4z"/>
+        <path d="m8 11 3 3-3 3"/>
+        <path d="M14 17h3"/>
+      </svg>
     </div>
-    <div class="arrow">→</div>
-    <div class="step">
-      <div class="step-number">3</div>
-      <div class="step-text">Open & Use</div>
+
+    <h1 class="hero-title">
+      A floating terminal,<br/>
+      <span class="accent">always above the page.</span>
+    </h1>
+    <p class="hero-sub">
+      ScreenPipe mirrors your terminal on top of any window, so you can talk to Claude Code while you read docs, browse, or design — no more frantic alt-tabbing.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/jarnaljitsingh/ScreenPipe/releases/latest">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Download for macOS
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/jarnaljitsingh/ScreenPipe">
+        <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.92c-3.2.7-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.94 10.94 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.74.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.13v3.16c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="meta-row">
+      <span class="item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+        100% free, MIT licensed
+      </span>
+      <span class="item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20"/><path d="M12 2a15.3 15.3 0 0 0 0 20"/></svg>
+        Terminal.app &amp; iTerm2
+      </span>
+      <span class="item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 18v3"/></svg>
+        Menu bar app · no dock clutter
+      </span>
+    </div>
+
+    <!-- HERO MOCK -->
+    <div class="hero-mock">
+      <div class="browser" aria-hidden="true">
+        <div class="browser-bar">
+          <div class="traffic"><span></span><span></span><span></span></div>
+          <div class="browser-url">docs.anthropic.com/claude/code</div>
+          <div style="width:54px"></div>
+        </div>
+        <div class="browser-body">
+          <h3 class="doc-h">Building agents with Claude Code</h3>
+          <p class="doc-p">Claude Code is a command-line tool that lets you delegate engineering tasks to Claude. It runs in your terminal, reads your repo, and proposes diffs you can apply with a single command.</p>
+          <div class="doc-block">npm install -g @anthropic-ai/claude-code</div>
+          <div class="doc-rows">
+            <div class="doc-card">
+              <h4>Composable workflows</h4>
+              <p>Chain prompts, review diffs, and run tests without leaving your shell.</p>
+            </div>
+            <div class="doc-card">
+              <h4>Full project context</h4>
+              <p>Claude can navigate your repo and follow conventions across files.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating terminal -->
+      <div class="pip">
+        <div class="pip-bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="pip-title">claude-code · ~/projects/screenpipe</div>
+          <svg class="pin-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76V6h6v4.76a2 2 0 0 0 .59 1.41l1.7 1.7A1 1 0 0 1 16.59 16H7.41a1 1 0 0 1-.71-1.7l1.71-1.7A2 2 0 0 0 9 10.76z"/></svg>
+        </div>
+        <div class="pip-body">
+          <div class="ln"><span class="pmt">❯</span><span class="cmd">claude</span></div>
+          <div class="ln"><span class="muted">Welcome to Claude Code v0.6 · context: /screenpipe</span></div>
+          <div class="ln"><span class="pmt">›</span><span class="cmd">refactor the menu bar controller using the pattern in the docs above</span></div>
+          <div class="ln"><span class="ok">●</span><span class="out">Reading <span class="pink">MenuBarController.swift</span>…</span></div>
+          <div class="ln"><span class="ok">●</span><span class="out">Proposing 3 edits across 2 files <span class="caret"></span></span></div>
+        </div>
+        <div class="pip-input">
+          <span style="color:var(--fg-3)">Ask Claude or paste a screenshot…</span>
+          <span class="send" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </span>
+        </div>
+      </div>
     </div>
   </div>
-</div>
+</section>
 
-<div class="platforms">
-  <span>Terminal.app</span>
-  <span>•</span>
-  <span>iTerm2</span>
-  <span>•</span>
-  <span>macOS 13+</span>
-</div>
+<!-- ============== PROBLEM ============== -->
+<section class="problem" id="problem">
+  <div class="wrap">
+    <div class="eyebrow">The problem</div>
+    <h2 class="section-title">Your terminal hides every time you need it.</h2>
+    <p class="section-sub">When you're using Claude Code, you're constantly bouncing between the docs you're reading, the design you're matching, and the prompt you're typing. The terminal goes behind. Focus goes with it.</p>
+
+    <div class="compare">
+      <div class="compare-card bad">
+        <div class="compare-tag">Without ScreenPipe</div>
+        <h3>Cmd-Tab purgatory</h3>
+        <p>Reach for the docs. Lose the terminal. Switch back. Forget what you were going to type.</p>
+        <div class="stack bad-stack">
+          <div class="win w1"><div class="win-bar"><i></i><i></i><i></i></div><div class="win-body">browser · docs</div></div>
+          <div class="win w2"><div class="win-bar"><i></i><i></i><i></i></div><div class="win-body">editor · App.tsx</div></div>
+          <div class="win w3"><div class="win-bar"><i style="background:#ff6b35"></i><i></i><i></i></div><div class="win-body" style="color:var(--accent)">$ claude_</div></div>
+          <svg class="arrows" viewBox="0 0 400 230" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.4" stroke-dasharray="3 4">
+            <path d="M120 60 C 180 90, 220 90, 280 70"/>
+            <path d="M280 70 C 220 130, 180 130, 130 170"/>
+            <path d="M130 170 C 200 200, 230 200, 290 150"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="compare-card good">
+        <div class="compare-tag">With ScreenPipe</div>
+        <h3>One floating window. Always there.</h3>
+        <p>Your terminal stays pinned above whatever you're working on. Read, type, paste a screenshot, ship.</p>
+        <div class="stack good-stack">
+          <div class="win w1">
+            <div class="win-bar"><i></i><i></i><i></i></div>
+            <div class="win-body">browser · docs.anthropic.com</div>
+          </div>
+          <div class="pip-mini">
+            <div class="win-bar"><i></i><i></i><i></i></div>
+            <div class="win-body">
+              <div>$ <span class="acc">claude</span></div>
+              <div>› apply patch from #3</div>
+              <div style="color:var(--green)">● done · 2 files changed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FEATURES ============== -->
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="eyebrow">What it does</div>
+    <h2 class="section-title">Small app. Sharp set of features.</h2>
+    <p class="section-sub">ScreenPipe does one thing — keep your terminal in reach — and gives you a few well-chosen tools to make it useful.</p>
+
+    <div class="grid">
+      <div class="feat">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76V6h6v4.76a2 2 0 0 0 .59 1.41l1.7 1.7A1 1 0 0 1 16.59 16H7.41a1 1 0 0 1-.71-1.7l1.71-1.7A2 2 0 0 0 9 10.76z"/></svg>
+        </div>
+        <h3>Always on top</h3>
+        <p>A live mirror of your terminal that floats above any window — browser, editor, Figma, anything.</p>
+      </div>
+
+      <div class="feat">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8v8H8z"/></svg>
+        </div>
+        <h3>Hotkey screenshots</h3>
+        <p>Capture full-screen or area selections and pipe them straight into your Claude Code prompt.</p>
+        <div class="kbd">
+          <span class="key">⌃</span><span class="key">⇧</span><span class="key">⌘</span><span class="key">1</span>
+          <span class="plus">full</span>
+          <span class="key">⌃</span><span class="key">⇧</span><span class="key">⌘</span><span class="key">2</span>
+          <span class="plus">area</span>
+        </div>
+      </div>
+
+      <div class="feat">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </div>
+        <h3>Inline send to Claude</h3>
+        <p>A small input field below the mirror lets you fire text or screenshots into your active session — no copy-paste tap dance.</p>
+      </div>
+
+      <div class="feat">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
+        </div>
+        <h3>Terminal &amp; iTerm2</h3>
+        <p>Mirrors the terminal you already use. Switching sessions on the host updates the floating mirror live.</p>
+      </div>
+
+      <div class="feat">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="4" rx="1"/><path d="M7 7v14"/><path d="M17 7v14"/><path d="M3 11h18"/></svg>
+        </div>
+        <h3>Lives in the menu bar</h3>
+        <p>No dock icon, no extra Cmd-Tab stop. ScreenPipe sits quietly in the menu bar until you summon it.</p>
+      </div>
+
+      <div class="feat">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+        </div>
+        <h3>Free &amp; open source</h3>
+        <p>MIT licensed. Read the source, file an issue, ship a PR. No telemetry, no account, no upsell.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== DEMO ============== -->
+<section class="demo" id="demo">
+  <div class="wrap">
+    <div class="eyebrow">In use</div>
+    <h2 class="section-title">Read, type, ship — without losing your place.</h2>
+    <p class="section-sub">A peek at the floating mirror sitting on top of an editor while Claude Code is mid-task.</p>
+
+    <div class="demo-frame">
+      <div class="demo-toolbar">
+        <div class="left">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+          ScreenPipe · floating
+        </div>
+        <div class="menu">
+          <span>⌘1 capture</span>
+          <span>⌘2 area</span>
+          <span class="live"><span></span> live mirror</span>
+        </div>
+      </div>
+
+      <div class="demo-stage">
+        <div class="ide">
+          <div class="ide-top">
+            <div class="dots" style="display:flex; gap:6px"><i style="display:block;width:9px;height:9px;border-radius:99px;background:#ec6a5e"></i><i style="display:block;width:9px;height:9px;border-radius:99px;background:#f4bf4f"></i><i style="display:block;width:9px;height:9px;border-radius:99px;background:#61c554"></i></div>
+            <span style="margin-left:6px">screenpipe</span>
+            <div class="tabs">
+              <span class="tab">README.md</span>
+              <span class="tab active">MenuBarController.swift</span>
+              <span class="tab">PipWindow.swift</span>
+            </div>
+          </div>
+
+          <div class="ide-side">
+            <div class="folder">▾ ScreenPipe</div>
+            <div class="file">App.swift</div>
+            <div class="file active">MenuBarController.swift</div>
+            <div class="file">PipWindow.swift</div>
+            <div class="file">Hotkeys.swift</div>
+            <div class="folder">▸ Resources</div>
+            <div class="folder">▸ Tests</div>
+          </div>
+
+          <div class="ide-main">
+            <div class="gutter">
+              <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div>
+            </div>
+<pre><span class="tk-com">// MenuBarController · keeps the floating mirror alive</span>
+<span class="tk-key">final class</span> <span class="tk-fn">MenuBarController</span>: <span class="tk-tag">NSObject</span> {
+  <span class="tk-key">private let</span> <span class="tk-var">statusItem</span> = NSStatusBar.system.statusItem(
+    withLength: <span class="tk-var">NSStatusItem</span>.variableLength)
+
+  <span class="tk-key">func</span> <span class="tk-fn">attach</span>(to window: <span class="tk-tag">PipWindow</span>) {
+    statusItem.button?.image = <span class="tk-fn">NSImage</span>(named: <span class="tk-str">"menubar-icon"</span>)
+    statusItem.button?.action = <span class="tk-com">#selector</span>(toggle)
+    window.level = .floating
+    window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+  }
+}</pre>
+          </div>
+
+          <div class="ide-bot">
+            <span class="seg">⎇ main</span>
+            <span class="seg">● 2 changes</span>
+            <span class="seg">Swift 5.9</span>
+            <span class="seg" style="margin-left:auto">Ln 7, Col 22</span>
+          </div>
+        </div>
+
+        <!-- Floating terminal pinned over the IDE -->
+        <div class="demo-pip">
+          <div class="pip-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="pip-title">claude-code · iTerm2 · live</div>
+            <svg class="pin-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76V6h6v4.76a2 2 0 0 0 .59 1.41l1.7 1.7A1 1 0 0 1 16.59 16H7.41a1 1 0 0 1-.71-1.7l1.71-1.7A2 2 0 0 0 9 10.76z"/></svg>
+          </div>
+          <div class="pip-body">
+            <div class="ln"><span class="pmt">❯</span><span class="cmd">claude</span><span class="muted">  · session #14</span></div>
+            <div class="ln"><span class="pmt">›</span><span class="cmd">make .level = .floating and explain why</span></div>
+            <div class="ln"><span class="ok">●</span><span class="out">Edit on <span class="pink">MenuBarController.swift:9</span></span></div>
+            <div class="ln"><span class="muted">  Pinning above normal windows keeps the mirror</span></div>
+            <div class="ln"><span class="muted">  visible across Spaces and full-screen apps.</span></div>
+            <div class="ln"><span class="warn">⌘1</span><span class="muted"> screenshot attached · 1.2 MB <span class="caret"></span></span></div>
+          </div>
+          <div class="pip-input">
+            <svg style="width:14px;height:14px;color:var(--fg-3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.81.01L6 21"/></svg>
+            <span>Now apply the same fix to PipWindow.swift</span>
+            <span class="send" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== INSTALL ============== -->
+<section class="install" id="install">
+  <div class="wrap">
+    <div class="eyebrow">Install</div>
+    <h2 class="section-title">Three steps. About thirty seconds.</h2>
+    <p class="section-sub">No installer, no signup, no nonsense. ScreenPipe is a single .app file you drag into Applications.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </div>
+        <h3>Download the latest release</h3>
+        <p>Grab <code>ScreenPipe.dmg</code> from the GitHub releases page.</p>
+        <a class="btn btn-ghost" style="height:38px; padding:0 14px; font-size:13px" href="https://github.com/jarnaljitsingh/ScreenPipe/releases/latest">
+          Open releases →
+        </a>
+      </div>
+
+      <div class="step">
+        <div class="step-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h7l2 2h9v11H3z"/></svg>
+        </div>
+        <h3>Drag into Applications</h3>
+        <p>Open the DMG and drop ScreenPipe into your Applications folder, just like any other Mac app.</p>
+        <code>~/Applications/ScreenPipe.app</code>
+      </div>
+
+      <div class="step">
+        <div class="step-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <h3>Launch &amp; pin</h3>
+        <p>Open ScreenPipe. Click the menu bar icon, hit <em>Pin terminal</em>, and you're floating.</p>
+        <code>⌃⇧⌘P · pin / unpin</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== CTA ============== -->
+<section class="cta">
+  <div class="wrap">
+    <div class="cta-card">
+      <div class="eyebrow" style="margin-bottom: 8px">v1.0 · macOS 13+</div>
+      <h2>Get back to one window of focus.</h2>
+      <p>ScreenPipe is free, open source, and built by a developer who got sick of Cmd-Tab. If it saves you ten alt-tabs a day, it's done its job.</p>
+      <div class="cta-row" style="margin-bottom: 0">
+        <a class="btn btn-primary" href="https://github.com/jarnaljitsingh/ScreenPipe/releases/latest">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          Download ScreenPipe
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/jarnaljitsingh/ScreenPipe">
+          <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.92c-3.2.7-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.94 10.94 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.74.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.13v3.16c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+          Star on GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FOOTER ============== -->
+<footer>
+  <div class="wrap foot-inner">
+    <div>Made with care by <a href="https://github.com/jarnaljitsingh" style="color:var(--fg-2)">Jarnaljit Singh</a> · MIT licensed</div>
+    <div class="foot-links">
+      <a href="https://github.com/jarnaljitsingh/ScreenPipe">GitHub</a>
+      <a href="https://github.com/jarnaljitsingh/ScreenPipe/issues">Issues</a>
+      <a href="https://github.com/jarnaljitsingh/ScreenPipe/releases/latest">Releases</a>
+    </div>
+  </div>
+</footer>
 
 </body>
 </html>
